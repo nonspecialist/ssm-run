@@ -1,0 +1,39 @@
+#!/bin/bash
+
+CMD=$1
+shift
+INSTANCE_IDS=$@
+PARAMS='{"commands":["'$CMD'"],"executionTimeout":["600"]}'
+
+ID=$( aws ssm send-command \
+    --document-name AWS-RunShellScript \
+    --instance-ids $INSTANCE_IDS \
+    --parameters "$PARAMS" \
+    --timeout-seconds 600 \
+    --query Command.CommandId \
+    --output text
+)
+
+# Wait for all instances to have finished running, one way or another
+n_instances=$( echo $INSTANCE_IDS | wc -w )
+while true; do
+    finished=0
+    for instance in $INSTANCE_IDS; do
+        STATUS=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query Status --output text | tr '[A-Z]' '[a-z]' )
+        echo $instance: $STATUS
+        case $STATUS in
+            pending|inprogress|delayed) : ;;
+            *) finished=$(( finished + 1 )) ;;
+        esac
+    done
+    [ $finished -ge $n_instances ] && break
+    sleep 5
+done
+
+for instance in $INSTANCE_IDS; do
+    STATUS=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query Status --output text )
+    RESULT=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query StandardOutputContent --output text )
+    echo "RESULTS FROM $instance (STATUS $STATUS):"
+    echo "$RESULT"
+    echo "------------------------------------"
+done

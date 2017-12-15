@@ -7,6 +7,14 @@ Allows you to:
 * execute one or more commands on one or more instances
 * wait for and display the output from all of the commands
 
+and that's all (so far)
+
+## Setup
+
+1. Make sure you have the SSM agent installed and running on your EC2 instances
+   (see http://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html)
+1. Make sure you have AWS credentials available for your command-line
+
 ## Usage
 
 ```shell

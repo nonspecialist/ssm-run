@@ -64,7 +64,7 @@ Linux ip-10-13-48-56 4.9.58-18.51.amzn1.x86_64 #1 SMP Tue Oct 24 22:44:07 UTC 20
 ------------------------------------
 ```
 
-# Execute a command 5 times, with a pause in between
+### Execute a command 5 times, with a pause in between
 
 ```shell
 localhost$ ssm-run 'for n in {1..5}; do df -k /; sleep 5; done' i-00c369e70f5e6dfbd
@@ -87,4 +87,37 @@ Filesystem     1K-blocks    Used Available Use% Mounted on
 Filesystem     1K-blocks    Used Available Use% Mounted on
 /dev/xvda1       8123812 1386520   6637044  18% /
 ------------------------------------
+```
+
+### Inspecting the output of a command later
+
+```shell
+localhost$ ssm-run date i-00c369e70f5e6dfbd
+Command launched with id 2002a76f-e1a5-45ce-a64c-c7310856ed10
+i-00c369e70f5e6dfbd: inprogress
+i-00c369e70f5e6dfbd: success
+RESULTS FROM i-00c369e70f5e6dfbd (STATUS Success):
+Fri Dec 15 00:58:20 UTC 2017
+------------------------------------
+
+localhost$ aws ssm get-command-invocation \
+    --command-id 2002a76f-e1a5-45ce-a64c-c7310856ed10 \
+    --instance-id i-00c369e70f5e6dfbd
+{
+    "Comment": "", 
+    "ExecutionElapsedTime": "PT0.005S", 
+    "ExecutionEndDateTime": "2017-12-15T00:58:20.834Z", 
+    "StandardErrorContent": "", 
+    "InstanceId": "i-00c369e70f5e6dfbd", 
+    "StandardErrorUrl": "", 
+    "DocumentName": "AWS-RunShellScript", 
+    "StandardOutputContent": "Fri Dec 15 00:58:20 UTC 2017\n", 
+    "Status": "Success", 
+    "StatusDetails": "Success", 
+    "PluginName": "aws:runShellScript", 
+    "ResponseCode": 0, 
+    "ExecutionStartDateTime": "2017-12-15T00:58:20.834Z", 
+    "CommandId": "2002a76f-e1a5-45ce-a64c-c7310856ed10", 
+    "StandardOutputUrl": ""
+}
 ```

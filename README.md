@@ -9,11 +9,16 @@ Allows you to:
 
 and that's all (so far)
 
-## Setup
+## Prerequisites
 
+1. `bash`
 1. Make sure you have the SSM agent installed and running on your EC2 instances
    (see http://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html)
 1. Make sure you have AWS credentials available for your command-line
+
+## Installation
+
+Copy `ssm-run` from this repo to somewhere in your `$PATH`. That's it.
 
 ## Usage
 

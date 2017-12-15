@@ -14,6 +14,8 @@ ID=$( aws ssm send-command \
     --output text
 )
 
+echo "Command launched with id $ID"
+
 # Wait for all instances to have finished running, one way or another
 n_instances=$( echo $INSTANCE_IDS | wc -w )
 while true; do
@@ -32,7 +34,12 @@ done
 
 for instance in $INSTANCE_IDS; do
     STATUS=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query Status --output text )
-    RESULT=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query StandardOutputContent --output text )
+    if [ "x$STATUS" = "xSuccess" ]; then
+        RESULT=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query StandardOutputContent --output text )
+    else
+        RESULT=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query StandardErrorContent --output text )
+    fi
+
     echo "RESULTS FROM $instance (STATUS $STATUS):"
     echo "$RESULT"
     echo "------------------------------------"

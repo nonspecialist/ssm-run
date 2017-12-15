@@ -32,11 +32,13 @@ while true; do
     sleep 5
 done
 
+EXITCODE=0
 for instance in $INSTANCE_IDS; do
     STATUS=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query Status --output text )
     if [ "x$STATUS" = "xSuccess" ]; then
         RESULT=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query StandardOutputContent --output text )
     else
+        EXITCODE=1
         RESULT=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query StandardErrorContent --output text )
     fi
 
@@ -44,3 +46,5 @@ for instance in $INSTANCE_IDS; do
     echo "$RESULT"
     echo "------------------------------------"
 done
+
+exit $EXITCODE

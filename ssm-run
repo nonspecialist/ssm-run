@@ -5,7 +5,6 @@ shift
 INSTANCE_IDS=$@
 PARAMS='{"commands":["'$CMD'"],"executionTimeout":["600"]}'
 
-set -x
 # Check that the agent is installed and running
 for instance in $INSTANCE_IDS; do
     STATUS=$( aws ssm describe-instance-information \
@@ -30,7 +29,6 @@ if [[ -z "$INSTANCE_IDS" || "$INSTANCE_IDS" =~ $ALL_SPACE ]]; then
     echo No instances available to run commands
     exit 2
 fi
-set +x
 
 ID=$( aws ssm send-command \
     --document-name AWS-RunShellScript \

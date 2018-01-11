@@ -5,14 +5,37 @@ shift
 INSTANCE_IDS=$@
 PARAMS='{"commands":["'$CMD'"],"executionTimeout":["600"]}'
 
+# Check that the agent is installed and running
+STATUS=$( aws ssm describe-instance-information \
+    --instance-information-filter-list key=InstanceIds,valueSet=${INSTANCE_IDS// /,} \
+    --query 'InstanceInformationList[].{id:InstanceId,status:PingStatus}' \
+    --output text )
+for instance in $INSTANCE_IDS; do
+    if ! echo "$STATUS" | grep -q "^$instance.*Online"; then
+        echo instance $instance is not running SSM agent
+        INSTANCE_IDS=${INSTANCE_IDS/$instance/}
+    fi
+done
+
+if [ -z "$INSTANCE_IDS" ]; then
+    echo No instances available to run commands
+    exit 2
+fi
+
 ID=$( aws ssm send-command \
     --document-name AWS-RunShellScript \
     --instance-ids $INSTANCE_IDS \
     --parameters "$PARAMS" \
     --timeout-seconds 600 \
     --query Command.CommandId \
-    --output text
+    --output text 2>&1
 )
+RES=$?
+
+if [ $RES -ne 0 ]; then
+    echo "ERROR invoking command: $ID"
+    exit $RES
+fi
 
 echo "Command launched with id $ID"
 
@@ -22,29 +45,35 @@ while true; do
     finished=0
     for instance in $INSTANCE_IDS; do
         STATUS=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query Status --output text | tr '[A-Z]' '[a-z]' )
-        echo $instance: $STATUS
+        NOW=$( date --iso-8601=seconds )
+        echo $NOW $instance: $STATUS
         case $STATUS in
             pending|inprogress|delayed) : ;;
             *) finished=$(( finished + 1 )) ;;
         esac
     done
     [ $finished -ge $n_instances ] && break
-    sleep 5
+    sleep 2
 done
 
-EXITCODE=0
 for instance in $INSTANCE_IDS; do
     STATUS=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query Status --output text )
-    if [ "x$STATUS" = "xSuccess" ]; then
-        RESULT=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query StandardOutputContent --output text )
-    else
-        EXITCODE=1
-        RESULT=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query StandardErrorContent --output text )
-    fi
+    OUT_RESULT=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query StandardOutputContent --output text )
+    ERR_RESULT=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query StandardErrorContent --output text )
 
-    echo "RESULTS FROM $instance (STATUS $STATUS):"
-    echo "$RESULT"
     echo "------------------------------------"
+    echo "RESULTS FROM $instance (STATUS $STATUS):"
+    if [ -n "$OUT_RESULT" ]; then
+        echo "STDOUT:"
+        echo "$OUT_RESULT"
+        echo "------------------------------------"
+    fi
+    if [ -n "$ERR_RESULT" ]; then
+        echo "STDERR:"
+        echo "$ERR_RESULT"
+        echo "------------------------------------"
+    fi
+    if [ -z "$OUT_RESULT" -a -z "$ERR_RESULT" ]; then
+        echo NO OUTPUT RETURNED
+    fi
 done
-
-exit $EXITCODE

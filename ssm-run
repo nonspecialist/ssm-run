@@ -5,22 +5,32 @@ shift
 INSTANCE_IDS=$@
 PARAMS='{"commands":["'$CMD'"],"executionTimeout":["600"]}'
 
+set -x
 # Check that the agent is installed and running
-STATUS=$( aws ssm describe-instance-information \
-    --instance-information-filter-list key=InstanceIds,valueSet=${INSTANCE_IDS// /,} \
-    --query 'InstanceInformationList[].{id:InstanceId,status:PingStatus}' \
-    --output text )
 for instance in $INSTANCE_IDS; do
-    if ! echo "$STATUS" | grep -q "^$instance.*Online"; then
+    STATUS=$( aws ssm describe-instance-information \
+        --instance-information-filter-list key=InstanceIds,valueSet=$instance \
+        --query 'InstanceInformationList[].{id:InstanceId,status:PingStatus}' \
+        --output text 2>&1 )
+
+    if [ $? -ne 0 ]; then
+        echo $STATUS
+        INSTANCE_IDS=${INSTANCE_IDS/$instance}
+        continue
+    fi
+
+    if ! echo "$STATUS" | grep -q "Online"; then
         echo instance $instance is not running SSM agent
-        INSTANCE_IDS=${INSTANCE_IDS/$instance/}
+        INSTANCE_IDS=${INSTANCE_IDS/$instance}
     fi
 done
 
-if [ -z "$INSTANCE_IDS" ]; then
+ALL_SPACE="^[[:space:]]$"
+if [[ -z "$INSTANCE_IDS" || "$INSTANCE_IDS" =~ $ALL_SPACE ]]; then
     echo No instances available to run commands
     exit 2
 fi
+set +x
 
 ID=$( aws ssm send-command \
     --document-name AWS-RunShellScript \
@@ -45,7 +55,7 @@ while true; do
     finished=0
     for instance in $INSTANCE_IDS; do
         STATUS=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query Status --output text | tr '[A-Z]' '[a-z]' )
-        NOW=$( date --iso-8601=seconds )
+        NOW=$( date +%Y-%m-%dT%H:%M:%S%z )
         echo $NOW $instance: $STATUS
         case $STATUS in
             pending|inprogress|delayed) : ;;

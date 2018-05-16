@@ -20,10 +20,23 @@ and that's all (so far)
 
 Copy `ssm-run` from this repo to somewhere in your `$PATH`. That's it.
 
+Example:
+```
+# cd to where you downloaded the project
+echo "export PATH=\$PATH:$(pwd)" >> ~/.bash_profile && source ~/.bash_profile
+```
+
 ## Usage
 
 ```shell
 localhost$ ssm-run "<commands>" <instance-id> [<instance-id> ...]
+```
+
+Alternatively you can set the instance ID's in a space-seperated environment variable
+as well as use single quotes to avoid having to escape most special characters;
+```shell
+localhost$ export INSTANCE_IDS="abc xyz"
+localhost$ ssm-run '<commands>'
 ```
 
 The command-ID is printed at the start of every run, which means you can use the regular

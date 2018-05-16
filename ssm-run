@@ -2,7 +2,11 @@
 
 CMD=$1
 shift
-INSTANCE_IDS=$@
+
+INSTANCE_IDS=${INSTANCE_IDS:-$@}
+
+ # INSTANCE_IDS=$@
+
 PARAMS='{"commands":["'$CMD'"],"executionTimeout":["600"]}'
 
 # Check that the agent is installed and running

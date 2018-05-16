@@ -36,7 +36,7 @@ Alternatively you can set the instance ID's in a space-seperated environment var
 as well as use single quotes to avoid having to escape most special characters;
 ```shell
 localhost$ export INSTANCE_IDS="abc xyz"
-ssm-run '<commands>'
+localhost$ ssm-run '<commands>'
 ```
 
 The command-ID is printed at the start of every run, which means you can use the regular

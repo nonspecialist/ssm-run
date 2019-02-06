@@ -1,8 +1,39 @@
 #!/bin/bash
 
+usage() {
+    echo "$(basename $0) '<commands>' <instance-id> [<instance-id> ...]"
+    echo "$(basename $0) '<commands>' --tag 'foo=bar'"
+}
+
+if [[ -z $1 ]] || [[ $1 == "--help" ]] || [[ $1 == "-h" ]]; then
+    usage
+    exit 1
+fi
+
 CMD=$1
 shift
-INSTANCE_IDS=$@
+
+case $1 in
+    -t|--tag)
+        shift
+        echo "running with tag $1"
+        INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters "Name=tag:${1%%=*},Values=${1##*=}" \
+            --query "Reservations[*].Instances[*].[InstanceId]" \
+            --output text)
+        echo "Found instances $(echo ${INSTANCE_IDS}|tr '\n' ' ')"
+        ;;
+    *)
+        INSTANCE_IDS=$@
+        ;;
+esac
+
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# set the command to run
 PARAMS='{"commands":["'$CMD'"],"executionTimeout":["600"]}'
 
 # Check that the agent is installed and running
@@ -63,22 +94,21 @@ while true; do
     [ $finished -ge $n_instances ] && break
     sleep 2
 done
-
+echo "------------------------------------"
 for instance in $INSTANCE_IDS; do
     STATUS=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query Status --output text )
     OUT_RESULT=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query StandardOutputContent --output text )
     ERR_RESULT=$( aws ssm get-command-invocation --command-id $ID --instance-id $instance --query StandardErrorContent --output text )
 
-    echo "------------------------------------"
-    echo "RESULTS FROM $instance (STATUS $STATUS):"
+    echo -e "RESULTS FROM $instance (STATUS ${YELLOW}${STATUS}${NC}):"
     if [ -n "$OUT_RESULT" ]; then
         echo "STDOUT:"
-        echo "$OUT_RESULT"
+        echo -e "${GREEN}${OUT_RESULT}${NC}"
         echo "------------------------------------"
     fi
     if [ -n "$ERR_RESULT" ]; then
         echo "STDERR:"
-        echo "$ERR_RESULT"
+        echo -e "${RED}${ERR_RESULT}${NC}"
         echo "------------------------------------"
     fi
     if [ -z "$OUT_RESULT" -a -z "$ERR_RESULT" ]; then

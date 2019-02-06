@@ -23,7 +23,9 @@ Copy `ssm-run` from this repo to somewhere in your `$PATH`. That's it.
 ## Usage
 
 ```shell
-localhost$ ssm-run "<commands>" <instance-id> [<instance-id> ...]
+localhost$ ssm-run --help
+ssm-run '<commands>' <instance-id> [<instance-id> ...]
+ssm-run '<commands>' --tag 'foo=bar'
 ```
 
 The command-ID is printed at the start of every run, which means you can use the regular
